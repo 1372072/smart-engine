@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/task
+        http://www.springframework.org/schema/task/spring-task.xsd
+		http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-4.2.xsd">
+
+    <!-- H2 DataSource -->
+    <jdbc:embedded-database id="dataSource" type="H2">
+        <jdbc:script location="classpath:sql/schema-h2-only-for-test.sql"/>
+        <jdbc:script location="classpath:sql/archive-schema-h2-only-for-test.sql"/>
+    </jdbc:embedded-database>
+
+    <!-- MyBatis SqlSessionFactory -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean"
+          p:dataSource-ref="dataSource"
+          p:configLocation="classpath:mybatis/mybatis-archive-test-config.xml"
+          p:mapperLocations="classpath:mybatis/sqlmap/*.xml"/>
+
+    <bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate">
+        <constructor-arg index="0" ref="sqlSessionFactory"/>
+    </bean>
+
+    <!-- Mapper Scanner for archive DAO -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.alibaba.smart.framework.engine.archive.dao"/>
+    </bean>
+
+    <!-- Transaction Manager -->
+    <bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+          p:dataSource-ref="dataSource"/>
+
+    <!-- Transaction Template -->
+    <bean id="transactionTemplate" class="org.springframework.transaction.support.TransactionTemplate">
+        <property name="transactionManager" ref="txManager"/>
+    </bean>
+
+    <!-- Archive Properties -->
+    <bean id="archiveProperties" class="com.alibaba.smart.framework.engine.archive.config.ArchiveProperties">
+        <property name="enabled" value="true"/>
+        <property name="retentionDays" value="1"/>
+        <property name="batchSize" value="10"/>
+    </bean>
+
+    <!-- Archive Service -->
+    <bean id="archiveService" class="com.alibaba.smart.framework.engine.archive.service.DefaultArchiveService">
+        <property name="archiveDAO" ref="archiveDAO"/>
+        <property name="archiveProperties" ref="archiveProperties"/>
+        <property name="transactionTemplate" ref="transactionTemplate"/>
+    </bean>
+
+    <!-- Task Scheduler -->
+    <task:scheduler id="archiveTaskScheduler" pool-size="1"/>
+
+    <!-- Archive Scheduler -->
+    <bean id="archiveScheduler" class="com.alibaba.smart.framework.engine.archive.scheduler.ArchiveScheduler">
+        <property name="archiveProperties" ref="archiveProperties"/>
+        <property name="archiveService" ref="archiveService"/>
+        <property name="taskScheduler" ref="archiveTaskScheduler"/>
+    </bean>
+
+</beans>
