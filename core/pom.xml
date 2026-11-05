@@ -7,7 +7,7 @@
         <version>4.0.0-boot4</version>
     </parent>
 
-    <artifactId>core</artifactId>
+    <artifactId>smart-engine-core</artifactId>
     <name>Smart Engine Core</name>
     <dependencies>
         <dependency>
